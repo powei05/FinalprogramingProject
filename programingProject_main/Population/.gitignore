@@ -1,0 +1,12 @@
+# Compiled binary
+Population.exe
+Population
+
+# Simulation output files
+*.gif
+*.csv
+
+# IDE and OS specific files
+.vscode/
+.idea/
+*.DS_Store
