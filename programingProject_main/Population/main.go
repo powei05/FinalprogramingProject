@@ -77,3 +77,5 @@ func main() {
 }
 
 //Victor- Movement/Behavior of Animals
+
+// example arg: go run . 1000 0.1 500 10 (numGens, timeStep, canvasWidth, imageFrequency)
