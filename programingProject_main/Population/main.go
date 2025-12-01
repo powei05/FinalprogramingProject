@@ -36,14 +36,15 @@ func main() {
 	defer csvWriter.Flush()
 
 	// Write header row
-	header := []string{"Generation", "rabbit", "sheep", "deer", "wolf", "human"}
+	header := []string{"Generation", "rabbit", "sheep", "deer", "wolf", "human", "plant_mass"}
 	csvWriter.Write(header)
 
 	// Write data rows and print to console
 	for i, ecosystem := range timePoints {
 		counts := CountSpecies(&ecosystem)
+		plantMass := CountPlantMass(&ecosystem) // Calculate plant mass
 		// Print to console (optional, but good for real-time feedback)
-		fmt.Printf("t=%d, rabbit=%d, sheep=%d, deer=%d, wolf=%d, human=%d\n", i, counts["rabbit"], counts["sheep"], counts["deer"], counts["wolf"], counts["human"])
+		fmt.Printf("t=%d, rabbit=%d, sheep=%d, deer=%d, wolf=%d, human=%d, plants=%.2f\n", i, counts["rabbit"], counts["sheep"], counts["deer"], counts["wolf"], counts["human"], plantMass)
 
 		// Prepare row for CSV
 		row := []string{
@@ -53,6 +54,7 @@ func main() {
 			strconv.Itoa(counts["deer"]),
 			strconv.Itoa(counts["wolf"]),
 			strconv.Itoa(counts["human"]),
+			strconv.FormatFloat(plantMass, 'f', 2, 64), // Add plant mass to the row
 		}
 		csvWriter.Write(row)
 	}

@@ -7,6 +7,7 @@ library(shiny)
 library(ggplot2)
 library(plotly)
 library(tidyr)
+library(dplyr)
 
 # --- 2. Define the User Interface (UI) ---
 ui <- fluidPage(
@@ -20,9 +21,9 @@ ui <- fluidPage(
             h4("Display Options"),
             # Checkboxes to toggle species visibility on the plot
             checkboxGroupInput("species_to_show", 
-                               "Select Species to Display:",
-                               choices = c("rabbit", "sheep", "deer", "wolf", "human"),
-                               selected = c("rabbit", "wolf")), # Initially select rabbit and wolf
+                               "Select Data to Display:",
+                               choices = c("rabbit", "sheep", "deer", "wolf", "human", "plant_mass"),
+                               selected = c("rabbit", "wolf", "plant_mass")), # Initially select rabbit, wolf, and plants
             
             hr(), # Horizontal line
             
@@ -56,6 +57,10 @@ server <- function(input, output) {
                                   names_to = "Species", 
                                   values_to = "Population")
         
+        # Apply log1p transformation (log(x+1)) to plant_mass for better scaling
+        data_long <- data_long %>%
+            mutate(Population = if_else(Species == "plant_mass", log1p(Population), Population))
+        
         # Filter data based on user's checkbox selection
         filtered_data <- subset(data_long, Species %in% input$species_to_show)
         
@@ -63,16 +68,18 @@ server <- function(input, output) {
         p <- ggplot(filtered_data, aes(x = Generation, y = Population, color = Species)) +
             geom_line(size = 1) +
             labs(
-                title = "Population over Generations",
-                x = "Generation (Time)",
-                y = "Population Count"
+                title = "Population and Plant Mass over Generations",
+                subtitle = "Note: Plant mass is shown on a log scale (log(mass + 1))",
+                x = "Generation",
+                y = "Count / Log(Mass)"
             ) +
             scale_color_manual(values = c(
                 "rabbit" = "lightpink",
                 "sheep"  = "lightgreen",
                 "deer"   = "lightblue",
                 "wolf"   = "darkgray",
-                "human"  = "gold"
+                "human"  = "gold",
+                "plant_mass" = "forestgreen"
             )) +
             theme_minimal() +
             theme(legend.position = "bottom")
@@ -84,4 +91,3 @@ server <- function(input, output) {
 
 # --- 4. Run the application ---
 shinyApp(ui = ui, server = server)
-

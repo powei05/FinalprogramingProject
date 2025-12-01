@@ -50,11 +50,22 @@ func InitializeEcosystem() Ecosystem {
 		}
 	}
 
+	// Initialize plants
+	var plants []Plant
+	numPlants := 200 // Let's start with 200 plants
+	for i := 0; i < numPlants; i++ {
+		pos := OrderedPair{x: rand.Float64() * width, y: rand.Float64() * width}
+		// Ensure plants do not spawn inside the lake.
+		if !IsInLake(pos, lake) {
+			plants = append(plants, Plant{position: pos, size: rand.Float64()*10 + 5}) // Random initial size
+		}
+	}
+
 	return Ecosystem{
 		Families: families,
 		Lake:     lake,
-		// Plants are initialized in main or another setup function if needed
-		width: width,
+		Plants:   plants, // Add the initialized plants
+		width:    width,
 		CarryingCapacity: map[string]int{
 			"rabbit": 1200,
 			"sheep":  800,

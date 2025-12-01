@@ -48,12 +48,34 @@ func DrawToCanvas(ecosystem Ecosystem, config Config) image.Image {
 	c.Circle(canvasX, canvasY, canvasRadius)
 	c.Fill()
 
+	// --- 植物繪製已根據需求停用 ---
+	// // Draw the plants
+	// for _, p := range ecosystem.Plants {
+	// 	DrawPlant(&c, p, config, ecosystem.width)
+	// }
+
 	for _, f := range ecosystem.Families {
 		// Draw each family
 		DrawFamily(&c, f, config, ecosystem.width)
 	}
 	// DrawLegend(c, config) // Temporarily disable the legend to remove the square at the top-left.
 	return c.GetImage()
+}
+
+// DrawPlant draws a single plant on the canvas.
+func DrawPlant(c *canvas.Canvas, p Plant, config Config, ecosystemWidth float64) {
+	// We can represent plants as small green circles.
+	// The radius can be based on the plant's size.
+	if p.size <= 0 {
+		return // Don't draw dead plants
+	}
+	radius := math.Sqrt(p.size) * 0.5           // Use a smaller multiplier for plants
+	plantColor := canvas.MakeColor(34, 139, 34) // ForestGreen
+	c.SetFillColor(plantColor)
+	canvasX := (p.position.x / ecosystemWidth) * float64(config.CanvasWidth)
+	canvasY := (p.position.y / ecosystemWidth) * float64(config.CanvasWidth)
+	c.Circle(canvasX, canvasY, radius)
+	c.Fill()
 }
 
 // DrawFamily draws the family on the canvas as a circle.

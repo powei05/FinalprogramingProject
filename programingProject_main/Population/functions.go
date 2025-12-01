@@ -175,7 +175,7 @@ func UpdatePosition(f Family, oldAcceleration OrderedPair, oldVelocity OrderedPa
 	return OrderedPair{x: Px, y: Py}
 }
 
-func updateFamilyPopulations(eco *Ecosystem) {
+func updateFamilyPopulations(eco *Ecosystem, consumedPlantMass map[int]float64) {
 	growthRates := make([]float64, len(eco.Families))
 	currentCounts := CountSpecies(eco)
 
@@ -188,8 +188,11 @@ func updateFamilyPopulations(eco *Ecosystem) {
 			gr *= (1.0 - float64(currentCounts[f.species.Name])/float64(capacity))
 		}
 
+		// 獵物的生長率現在與實際吃掉的植物量掛鉤
 		if f.species.Type == "prey" {
-			gr += PlantCoefficient // This could be more complex, e.g., based on local plant density
+			// 將消耗的植物量轉換為生長加成。
+			// PlantGrowthConversionFactor 是一個新的常數，代表每單位植物能提供多少生長率。
+			gr += consumedPlantMass[i] * PlantGrowthConversionFactor
 		}
 
 		// Add a growth bonus if the family is inside the lake.
@@ -265,6 +268,21 @@ func UpdateEcosystem(ecosystem *Ecosystem, timeStep float64) {
 		ecosystem.weatherChangeCounter = 0 // Reset the counter
 	}
 
+	// 2. Update Lake size based on weather and push out any families caught inside.
+	// The logic is changed to directly SET the radius based on weather, not incrementally change it.
+	// This avoids issues with state being copied each frame.
+	lakeRadiusCoeff := CoefficientOfLakeIncrease(ecosystem.weather)
+	// Rainy (0.20): 100% of max size.
+	// Sunny/Frozen (0.00): 80% of max size.
+	// Dry (-0.20): 60% of max size.
+	baseRatio := 0.8 // Corresponds to Sunny/Frozen weather
+	ecosystem.Lake.Radius = ecosystem.Lake.MaxRadius * (baseRatio + lakeRadiusCoeff)
+
+	// After the lake resizes, check if any family is now inside and push them out.
+	for i := range ecosystem.Families {
+		ecosystem.Families[i].Position = PushOutOfLake(ecosystem.Families[i].Position, ecosystem.Lake)
+	}
+
 	// First, update family movement and physics
 	updatedFamilies := make([]Family, len(ecosystem.Families))
 
@@ -304,11 +322,11 @@ func UpdateEcosystem(ecosystem *Ecosystem, timeStep float64) {
 	plantGrowthCoeff := 1.0 + CoefficientOfPlantIncrease(ecosystem.weather)
 	ecosystem.Plants = PlantGrowth(ecosystem.Plants, plantGrowthCoeff)
 
-	// Prey consume plants
-	ConsumePlants(ecosystem, consumptionRate, Eating_Threshold)
+	// 獵物消耗植物，並記錄每個家族的消耗量
+	consumedMass := ConsumePlants(ecosystem, consumptionRate, Eating_Threshold)
 
 	// 4. Update Animal Populations based on interactions and environment
-	updateFamilyPopulations(ecosystem)
+	updateFamilyPopulations(ecosystem, consumedMass)
 
 	// 5. Split large families
 	SplitLargeFamilies(ecosystem)
@@ -374,23 +392,32 @@ func InitFamilies(speciesName string, totalPopulation int, initialSpeed, ecosyst
 	return families
 }
 
-func ConsumePlants(ecosystem *Ecosystem, consumptionRate float64, threshold float64) {
+func ConsumePlants(ecosystem *Ecosystem, consumptionRate float64, threshold float64) map[int]float64 {
+	consumedMassByFamily := make(map[int]float64)
+
 	for fi := range ecosystem.Families {
 		f := &ecosystem.Families[fi]
 		if f.species.Type == "prey" { // only prey eat plants
+			totalConsumed := 0.0
 			for pi := range ecosystem.Plants {
-				dx := ecosystem.Plants[pi].position.x - f.Position.x
-				dy := ecosystem.Plants[pi].position.y - f.Position.y
-				d := math.Sqrt(dx*dx + dy*dy)
-				if d < threshold {
-					ecosystem.Plants[pi].size -= consumptionRate
-					if ecosystem.Plants[pi].size < 0 {
-						ecosystem.Plants[pi].size = 0
+				if ecosystem.Plants[pi].size > 0 {
+					dx := ecosystem.Plants[pi].position.x - f.Position.x
+					dy := ecosystem.Plants[pi].position.y - f.Position.y
+					d := math.Sqrt(dx*dx + dy*dy)
+					if d < threshold {
+						eatenAmount := consumptionRate
+						if ecosystem.Plants[pi].size < eatenAmount {
+							eatenAmount = ecosystem.Plants[pi].size
+						}
+						ecosystem.Plants[pi].size -= eatenAmount
+						totalConsumed += eatenAmount
 					}
 				}
 			}
+			consumedMassByFamily[fi] = totalConsumed
 		}
 	}
+	return consumedMassByFamily
 }
 
 func PlantGrowth(plants []Plant, growthCoeff float64) []Plant {
@@ -402,12 +429,17 @@ func PlantGrowth(plants []Plant, growthCoeff float64) []Plant {
 	return plants
 }
 
+// PlantGrowthConversionFactor: How much growth rate 1 unit of plant mass provides.
+// This is a new constant you can tune.
+const PlantGrowthConversionFactor = 0.1
+
 // --- Lake Functions ---
 
 func InitializeLake(x, y, radius float64) Lake {
 	return Lake{
-		Position: OrderedPair{x: x, y: y},
-		Radius:   radius,
+		Position:  OrderedPair{x: x, y: y},
+		Radius:    radius,
+		MaxRadius: radius, // Set the max radius to the initial radius.
 	}
 }
 
@@ -417,4 +449,32 @@ func IsInLake(position OrderedPair, lake Lake) bool {
 	dist := math.Hypot(position.x-lake.Position.x, position.y-lake.Position.y)
 	// If the distance is less than the radius, the position is inside the lake.
 	return dist <= lake.Radius
+}
+
+// CountPlantMass calculates the total size of all plants in the ecosystem.
+func CountPlantMass(ecosystem *Ecosystem) float64 {
+	var totalMass float64
+	for _, p := range ecosystem.Plants {
+		totalMass += p.size
+	}
+	return totalMass
+}
+
+// PushOutOfLake checks if a position is inside the lake. If so, it moves it to the nearest edge.
+func PushOutOfLake(position OrderedPair, lake Lake) OrderedPair {
+	dx := position.x - lake.Position.x
+	dy := position.y - lake.Position.y
+	dist := math.Hypot(dx, dy)
+
+	// If the position is inside the lake and the lake has a size
+	if dist < lake.Radius && dist > 0 {
+		// Calculate the unit vector from the lake center to the position
+		pushVecX := dx / dist
+		pushVecY := dy / dist
+		// Move the position to the edge of the lake, adding a small buffer (1.0)
+		newX := lake.Position.x + pushVecX*(lake.Radius+1.0)
+		newY := lake.Position.y + pushVecY*(lake.Radius+1.0)
+		return OrderedPair{x: newX, y: newY}
+	}
+	return position // Return original position if not inside
 }

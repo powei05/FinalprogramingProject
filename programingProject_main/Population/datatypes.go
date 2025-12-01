@@ -1,8 +1,9 @@
 package main
 
 type Lake struct {
-	Radius   float64
-	Position OrderedPair // Represents the center of the circle
+	Radius    float64
+	MaxRadius float64     // The initial and maximum radius of the lake.
+	Position  OrderedPair // Represents the center of the circle
 }
 
 type Ecosystem struct {
