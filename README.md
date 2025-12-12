@@ -26,6 +26,7 @@ where .\population numGens timestep canvasWidth imageFrequency
   shiny::runApp()
   ```
   2.2 auto created animation
+  
   proogramingProject_main/population/Animal_Sim.gif.out.gif
   
 ## Contributors
