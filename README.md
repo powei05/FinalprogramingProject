@@ -22,7 +22,7 @@ where .\population numGens timestep canvasWidth imageFrequency
 
   2.1 Population curves by Rshiny
   ```r
-  setwd("programingProject_main/Population")
+  setwd("FinalprogramingProject/programingProject_main/Population")
   shiny::runApp()
   ```
   2.2 auto created animation
