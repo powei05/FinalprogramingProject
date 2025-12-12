@@ -23,7 +23,7 @@ where .\population numGens timestep canvasWidth imageFrequency
 shiny::runApp()
 
 2.2 auto created animation
-![Simulation Demo](proogramingProject_main/population/Animal_Sim.gif.out.gif)
+proogramingProject_main/population/Animal_Sim.gif.out.gif
 
 Contributors: Po-Wei Chang, An Wang, Victor Chiu, Luke Smallwood
 
