@@ -28,7 +28,7 @@ where .\population numGens timestep canvasWidth imageFrequency
   2.2 auto created animation
   proogramingProject_main/population/Animal_Sim.gif.out.gif
   
-**Contributors** 
+## Contributors
 Po-Wei Chang, An Wang, Victor Chiu, Luke Smallwood
 
 
