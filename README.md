@@ -12,7 +12,7 @@ Before running the project, ensure you have the following installed: Go, R, R Pa
 1. Navigate to the main project directory and run the Go program. This will execute the simulation logic and generate the data logs.
 
 ```bash
-cd programingProject_main/Population
+cd FinalprogramingProject-main/programingProject_main/Population
 .\population 1000 0.1 500 10
 ```
 
